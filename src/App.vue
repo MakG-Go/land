@@ -1,41 +1,22 @@
-
-
 <template>
     <div>
         <div class="wrapper">
-            <!-- <div v-for="(qurrentModel, key) in models" :key="qurrentModel.name">
-        <webGl
-          v-if="showModel(key)"
-          :qurrent-model="qurrentModel"
-          :descripton="show"
-          @show-description="showDescription"
-        >
-          <button class="btn btn-primary" @click="prevModel">Prev</button>
-          <button class="btn btn-primary" @click="nextModel">Next</button>
-        </webGl>
-      </div> -->
-
             <webGl
                 :models-data="models"
                 :qurrent-model-key="qurrentModelKey"
                 :descripton="show"
+                :start-state="startState"
                 @show-description="showDescription"
                 @model-loaded="modelLoaded"
+                @start-state-off="startStateOff"
             >
-                <!-- <button
-                    class="btn btn-primary webGl__btn_prev"
-                    :disabled="show || !loaded || !prevDisable"
-                    @click="prevModel"
-                >
-                    Prev
-                </button>
                 <button
-                    class="btn btn-primary webGl__btn_next"
-                    :disabled="show || !loaded || !nextDisable"
-                    @click="nextModel"
+                    v-if="startStateBtn"
+                    class="btn btn-primary"
+                    @click="turnStartState"
                 >
-                    Next
-                </button> -->
+                    Назад
+                </button>
             </webGl>
 
             <description
@@ -72,12 +53,14 @@ export default {
             qurrentModelKey: 0,
             descriptionKey: 0,
             descriptionName: null,
+            startStateBtn: false,
+            startState: true,
 
             models: [
                 {
-                    model: "models/ground.glb",
+                    model: "models/ground_1_1.glb",
                     scale: 1,
-                    position: { x: 0, y: 0.8, z: 0 },
+                    position: { x: 0, y: 1.2, z: 0 },
                     name: "land",
                     startDiacription: "Слой 1",
                 },
@@ -89,9 +72,9 @@ export default {
                     startDiacription: "Слой 2",
                 },
                 {
-                    model: "models/ground_3.glb",
+                    model: "models/ground_3_1.glb",
                     scale: 1,
-                    position: { x: 0, y: -0.8, z: 0 },
+                    position: { x: 0, y: -1.2, z: 0 },
                     name: "land_3",
                     startDiacription: "Слой 3",
                 },
@@ -99,6 +82,16 @@ export default {
         };
     },
     methods: {
+        turnStartState() {
+            this.startState = true;
+            this.startStateBtn = false;
+        },
+
+        startStateOff() {
+            this.startStateBtn = true;
+            this.startState = false;
+        },
+
         showDescription(key, name) {
             console.log(key, name);
 
@@ -107,43 +100,18 @@ export default {
             this.descriptionName = name;
         },
 
+        modelLoaded(state) {
+            this.loaded = state;
+        },
+
         closeDescripton() {
             this.show = false;
         },
-
-        // nextModel() {
-        //     if (this.qurrentModelKey < this.models.length - 1) {
-        //         this.qurrentModelKey++;
-        //         this.loaded = false;
-        //         return;
-        //     }
-        // },
-        // prevModel() {
-        //     if (this.qurrentModelKey > 0) {
-        //         this.qurrentModelKey--;
-        //         this.loaded = false;
-        //         return;
-        //     }
-        // },
-        // modelLoaded(state) {
-        //     this.loaded = state;
-        // },
     },
-    computed: {
-        // showModel() {
-        //     return (key) => {
-        //         return key === this.qurrentModelKey;
-        //     };
-        // },
-        nextDisable() {
-            return this.qurrentModelKey < this.models.length - 1;
-        },
-        prevDisable() {
-            return this.qurrentModelKey > 0;
-        },
-    },
+    computed: {},
 };
 </script>
 
 <style scoped>
 </style>
+

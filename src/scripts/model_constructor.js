@@ -1,4 +1,3 @@
-/** Constructor */
 import { Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import * as THREE from 'three'
@@ -6,87 +5,90 @@ import * as THREE from 'three'
 export class CreateModel {
 
     constructor(params) {
-
-        this.Init(params)
+        this.Init(params);
     }
 
     Init(params) {
-        this.params = params
+        this.params = params;
         this.LoadModels(this.params);
     }
 
-
     LoadModels(params) {
-
-        this.params = params
+        this.params = params;
+        this.clickBoxSize = { x: '', y: '', z: '' };
 
         new GLTFLoader(this.params.preloader).load(this.params.model, (gltf) => {
+            this.model = gltf.scene;
+            this.model.updateMatrixWorld(true);
+            this.params.meshStore.push(gltf.scene);
 
-            let model = gltf.scene
-            let clickBox = null
-            let clickBoxMaterial = null
-            let clickBoxMesh = null
-            let clickBoxSize = { x: '', y: '', z: '' }
-            let clickBoxId = null
-
-            this.params.meshStore.push(gltf.scene)
-            model.children.forEach((child, key) => {
-                clickBoxId = key
-
+            this.model.children.forEach((child, key) => {
                 if (child.isMesh) {
-
-                    model.userData[child.name] = child.material
-                    // child.material.transparent = true
-                    child.material.envMap = this.params.material
-                    child.material.envMapIntensity = 3
-                    child.material.needsUpdate = true
-                    child.userData.parentName = this.params.name
-                    child.userData.key = key
+                    this.model.userData[child.name] = child.material;
+                    child.material.envMap = this.params.material;
+                    child.material.envMapIntensity = 3;
+                    child.material.needsUpdate = true;
+                    child.userData.parentName = this.params.name;
+                    child.userData.key = key;
                     child.userData.originalColor = child.material.color.clone();
-                    this.params.materialColor.set(child, child.material.color.clone())
-
-                    this.params.intersecStore[this.params.name].push(child)
+                    this.params.materialColor.set(child, child.material.color.clone());
+                    this.params.intersecStore[this.params.name].push(child);
 
                     if (child.name.includes('Landscape')) {
-                        clickBoxSize.x = (Math.abs(child.geometry.boundingBox.max.x) + Math.abs(child.geometry.boundingBox.min.x)) * 1.01;
-                        clickBoxSize.y = (Math.abs(child.geometry.boundingBox.max.y) + Math.abs(child.geometry.boundingBox.min.y)) * 1.5;
-                        clickBoxSize.z = (Math.abs(child.geometry.boundingBox.max.z) + Math.abs(child.geometry.boundingBox.min.z)) * 1.01;
+                        this.clickBoxSize.x = (Math.abs(child.geometry.boundingBox.max.x) + Math.abs(child.geometry.boundingBox.min.x)) * 1.01;
+                        this.clickBoxSize.y = (Math.abs(child.geometry.boundingBox.max.y) + Math.abs(child.geometry.boundingBox.min.y)) * 1.0;
+                        this.clickBoxSize.z = (Math.abs(child.geometry.boundingBox.max.z) + Math.abs(child.geometry.boundingBox.min.z)) * 1.01;
                     }
-
                 }
+            });
 
-            })
+            this.model.name = this.params.name;
 
 
-            model.name = this.params.name
+            if (this.params.scale) {
+                this.model.scale.set(this.params.scale.x, this.params.scale.y, this.params.scale.z);
+            }
 
-            console.log(this.params.position)
+            this.params.scene.add(this.model);
 
-            this.params.position ? model.position.set(this.params.position.x, this.params.position.y, this.params.position.z) : ''
+            // if (this.params.position) {
+            //     this.model.position.set(this.params.position.x, this.params.position.y, this.params.position.z);
+            //     this.model.children.forEach((child) => {
+            //         if (child.isMesh) {
+            //             console.log(`Child Mesh "${child.name}" Local Position:`, child.position);
 
-            this.params.scale ? model.scale.set(this.params.scale.x, this.params.scale.y, this.params.scale.z) : ''
+            //             const localPosition = new Vector3();
+            //             localPosition.copy(child.position);
+            //             child.position.set(0, 0, 0);
+            //             localPosition.applyMatrix4(this.model.matrixWorld);
+            //             child.position.copy(localPosition);
+            //         }
+            //     });
+            // }
 
-            this.params.scene.add(model)
 
-            /** Мешь для стартовго перехода */
+            this.CreateIntersecBox(this.params, this.clickBoxSize, this.model);
+        });
+    }
 
-            clickBox = new THREE.BoxGeometry(clickBoxSize.x, clickBoxSize.y, clickBoxSize.z)
-            clickBoxMaterial = new THREE.MeshStandardMaterial({ visible: false })
-            clickBoxMesh = new THREE.Mesh(clickBox, clickBoxMaterial)
-            clickBoxMesh.name = this.params.name + 'adasd'
-            clickBoxMesh.position.set(this.params.position.x, this.params.position.y, this.params.position.z)
-            clickBoxMesh.userData.discripton = this.params.startDiacription
-            clickBoxMesh.updateMatrixWorld(true)
+    CreateIntersecBox(params, size, model) {
+        this.params = params;
+        this.clickBox = null;
+        this.clickBoxMaterial = null;
+        this.clickBoxMesh = null;
 
-            this.params.scene.add(clickBoxMesh)
+        this.clickBox = new THREE.BoxGeometry(size.x, size.y, size.z);
+        this.clickBoxMaterial = new THREE.MeshStandardMaterial({ visible: true, transparent: true, opacity: 0.5 });
+        this.clickBoxMesh = new THREE.Mesh(this.clickBox, this.clickBoxMaterial);
+        this.clickBoxMesh.name = this.params.name;
+        this.clickBoxMesh.position.set(this.params.position.x, this.params.position.y, this.params.position.z);
 
-            this.params.intersecStore.box.push(clickBoxMesh)
 
-            // console.log(clickBoxMesh)
-            // console.log(this.params.scene)
+        // this.clickBoxMesh.position.copy(model.position);
+        this.clickBoxMesh.userData.discripton = this.params.startDiacription;
+        this.clickBoxMesh.updateMatrixWorld(true);
 
-        }
-        )
-
+        this.params.scene.add(this.clickBoxMesh);
+        this.params.intersecStore.box.push(this.clickBoxMesh);
     }
 }

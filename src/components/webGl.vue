@@ -10,9 +10,9 @@ import { CreateModel } from "@/scripts/model_constructor.js";
 
 export default {
     props: {
+        startState: { type: Boolean, default: false },
         descripton: { type: Boolean, default: false },
         qurrentModelKey: { type: Number, default: 0 },
-        // qurrentModel: { type: Object, required: true },
         modelsData: { type: Array, required: true },
     },
     data() {
@@ -45,7 +45,7 @@ export default {
                 land_3: [],
             },
 
-            boxIntersec: true,
+            boxIntersec: false,
             nameCollection: "",
 
             hoveredObject: null,
@@ -60,8 +60,7 @@ export default {
         this.canvas = this.$refs.webGl;
         this.tooltip = this.$refs.tooltip;
         this.init();
-        // this.throttledHoverModel = _.throttle(this.hoverModel, 100);
-        // this.getModel(this.getModelData).addModel;
+        this.throttledHoverModel = _.throttle(this.hoverModel, 1);
         this.resize();
         this.tick();
 
@@ -74,6 +73,8 @@ export default {
                 this.cursor.y = -(event.clientY / this.getSizes.height - 0.5);
             });
         }
+
+        console.log(this.scene.children);
     },
     beforeUnmount() {
         this.destroyScene();
@@ -86,6 +87,7 @@ export default {
         init() {
             this.scene = new THREE.Scene();
             this.raycaster = new THREE.Raycaster();
+            this.landRaycaster = new THREE.Raycaster();
             this.mouse = new THREE.Vector2();
 
             this.getCameraParams();
@@ -101,7 +103,8 @@ export default {
                 this.getModel(model);
             });
 
-            console.log(this.intersects);
+            // this.axesHelper = new THREE.AxesHelper(5);
+            // this.scene.add(this.axesHelper);
 
             //   this.createGuiParams();
         },
@@ -171,6 +174,7 @@ export default {
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             this.raycaster.setFromCamera(this.mouse, this.camera);
+            this.landRaycaster.setFromCamera(this.mouse, this.camera);
         },
 
         createLight() {
@@ -198,6 +202,7 @@ export default {
                         opacity: 1,
                     });
                     this.$emit("model-loaded", true);
+
                     this.$refs.preloader.classList.remove("active");
                     this.loadPercetn = 0;
                     console.log("Loaded");
@@ -279,40 +284,45 @@ export default {
             // }
         },
 
-        // hoverModel(event) {
-        //     this.getRaycaster(event);
+        hoverModel(event) {
+            this.getRaycaster(event);
 
-        //     const intersects = this.raycaster.intersectObjects(
-        //         this.scene.children
-        //     );
+            const intersect = this.raycaster.intersectObjects(
+                // this.intersects["land"]
+                this.scene.children
+            );
 
-        //     if (intersects.length > 0 && this.hover) {
-        //         this.handleIntersect(intersects, event);
-        //     } else {
-        //         if (this.hoveredObject !== null) {
-        //             this.smoothHoverOff(this.hoveredObject.material.emissive);
+            // const intersects = this.raycaster.intersectObjects(
+            //     this.scene.children
+            // );
 
-        //             this.hoveredObject = null;
-        //             this.tooltipText = "";
+            // if (intersects.length > 0 && this.hover) {
+            //     this.handleIntersect(intersects, event);
+            // } else {
+            //     if (this.hoveredObject !== null) {
+            //         this.smoothHoverOff(this.hoveredObject.material.emissive);
 
-        //             this.hideTooltip();
-        //         }
-        //     }
-        // },
+            //         this.hoveredObject = null;
+            //         this.tooltipText = "";
 
-        // smoothHoverOff(object) {
-        //     this.canvas.style.cursor = "default";
-        //     return gsap.to(object, {
-        //         ...this.emissiveOff,
-        //     });
-        // },
+            //         this.hideTooltip();
+            //     }
+            // }
+        },
 
-        // smoothHoverOn(object) {
-        //     this.canvas.style.cursor = "pointer";
-        //     return gsap.to(object, {
-        //         ...this.emissiveOn,
-        //     });
-        // },
+        smoothHoverOff(object) {
+            this.canvas.style.cursor = "default";
+            return gsap.to(object, {
+                ...this.emissiveOff,
+            });
+        },
+
+        smoothHoverOn(object) {
+            this.canvas.style.cursor = "pointer";
+            return gsap.to(object, {
+                ...this.emissiveOn,
+            });
+        },
 
         calculateTooltipPosition(event, objectPosition) {
             const offsetX = -200;
@@ -340,29 +350,43 @@ export default {
 
         clickModel(event) {
             this.getRaycaster(event);
-            let intersects;
 
-            if (this.boxIntersec) {
-                intersects = this.raycaster.intersectObjects(
+            let boxIntersects, landItersects;
+
+            if (!this.boxIntersec) {
+                boxIntersects = this.raycaster.intersectObjects(
                     this.intersects.box
                 );
-                let moveto = intersects[0];
-                let target = moveto.object.position;
-                let targetClone = moveto.object.position.clone();
-                targetClone.x = targetClone.x + 0.5;
-                targetClone.y = targetClone.y + 1;
-                targetClone.z = targetClone.z + 1.25;
 
-                // gsap.to(this.controls.target, {
-                //     ...moveto.point,
-                // });
-                this.moveCameraPosition(moveto.point, targetClone);
+                if (boxIntersects.length > 0) {
+                    const box = boxIntersects[0];
 
-                console.log(targetClone.x);
+                    this.nameCollection = box.object.name;
+
+                    this.zoomModel(box, 3.5, 1, 3.5, -0.4);
+
+                    this.$emit("start-state-off");
+                }
+                this.boxIntersec = true;
             } else {
-                intersects = this.raycaster.intersectObjects(
-                    this.intersects[this.nameCollection]
+                landItersects = this.raycaster.intersectObjects(
+                    this.scene.children
+                    // this.intersects[this.nameCollection]
                 );
+
+                if (landItersects.length > 1) {
+                    const model = landItersects[1];
+
+                    if (
+                        this.intersects[this.nameCollection].some(
+                            (o) => o.name === model.object.name
+                        )
+                    ) {
+                        this.zoomModel(model, 2, 1, 2, -0.5);
+                    }
+                }
+
+                this.controls.minDistance = 1;
             }
 
             // if (this.hoveredObject !== null) {
@@ -442,20 +466,24 @@ export default {
             // }
         },
 
-        // changeModel() {
-        //     this.$refs.preloader.classList.add("active");
-        //     this.destroyModel();
-        //     this.moveCameraPosition(
-        //         this.startTargetCamera,
-        //         this.startCameraPosition
-        //     );
-        //     this.getModel(this.getModelData).addModel;
-        // },
+        zoomModel(model, x, y, z, up) {
+            const targetClone = model.object.position.clone();
+            targetClone.x = targetClone.x + x;
+            targetClone.y = targetClone.y + y;
+            targetClone.z = targetClone.z + z;
+
+            const targetWathcherClone = model.object.position.clone();
+            targetWathcherClone.y = targetWathcherClone.y + up;
+
+            console.log(targetWathcherClone.y);
+
+            this.moveCameraPosition(targetWathcherClone, targetClone);
+        },
 
         moveCameraPosition(target, position) {
             let tl = gsap.timeline();
             if (!this.showDescripton) {
-                tl.to(this.targetCamera, {
+                tl.to(this.controls.target, {
                     ...target,
                     duration: 1,
                     onComplete: () => {
@@ -547,15 +575,6 @@ export default {
             this.startParalax = false;
         },
         tick() {
-            //   this.clock = new THREE.Clock();
-            //   const elapsedTime = this.clock.getElapsedTime();
-            //   let delta = elapsedTime - this.prev;
-            //   this.prev = delta;
-
-            /** Test mesh */
-            // this.planeMaterial.color.set(""#0083c4"");
-            // this.plane.rotation.y += 0.01;
-
             if (
                 this.startParalax &&
                 (this.cursor.x !== 0 || this.cursor.y !== 0)
@@ -719,9 +738,20 @@ export default {
                 );
             }
         },
+
         qurrentModelKey() {
-            //   this.destroyModel();
             this.changeModel();
+        },
+
+        startState() {
+            if (this.startState) {
+                this.moveCameraPosition(
+                    this.startTargetCamera,
+                    this.startCameraPosition
+                );
+                this.boxIntersec = false;
+                this.controls.minDistance = 4;
+            }
         },
     },
 };
@@ -745,7 +775,6 @@ export default {
             ref="webGl"
             class="webGl"
             @click="clickModel"
-            @mousemove="throttledHoverModel"
             :class="getActiveClass"
         ></div>
         <div class="tooltip" ref="tooltip">{{ tooltipText }}</div>
