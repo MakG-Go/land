@@ -21,8 +21,11 @@ export default {
             startTargetCamera: new THREE.Vector3(0, 0, 0),
             startCameraPosition: new THREE.Vector3(4, 2, 5),
 
-            showCameraPosition: new THREE.Vector3(0.3, 0.85, 2.65),
-            showTargetPosition: new THREE.Vector3(0.85, 0, 0),
+            // showCameraPosition: new THREE.Vector3(0.3, 0.85, 2.65),
+            // showTargetPosition: new THREE.Vector3(0.85, 0, 0),
+
+            laersCameraPosition: null,
+            laersTargetPosition: null,
 
             startParalax: true,
             cursor: {
@@ -118,6 +121,7 @@ export default {
 
             this.camera.position.copy(this.startCameraPosition);
         },
+
         getRendererParams() {
             this.renderer = new THREE.WebGLRenderer({
                 antialias: true,
@@ -157,17 +161,19 @@ export default {
 
             // this.controls.target = this.targetCamera;
 
-            this.controls.minPolarAngle = Math.PI * 0.2; // radians
+            this.controls.minPolarAngle = Math.PI * 0.2;
             this.controls.maxPolarAngle = Math.PI * 0.5;
 
-            this.controls.minAzimuthAngle = 0; // radians
-            this.controls.maxAzimuthAngle = Math.PI * 0.5;
+            // this.controls.minAzimuthAngle = 0;
+            // this.controls.maxAzimuthAngle = Math.PI * 0.5;
 
             this.controls.zoomSpeed = 0.5;
             this.controls.panSpeed = 0.5;
 
             this.controls.rotateSpeed = 0.15;
             this.controls.enableKeys = false;
+
+            this.controls.autoRotateSpeed = 0.5;
         },
 
         getRaycaster(event) {
@@ -351,6 +357,8 @@ export default {
         clickModel(event) {
             this.getRaycaster(event);
 
+            console.log("click", this.boxIntersec);
+
             let boxIntersects, landItersects;
 
             if (!this.boxIntersec) {
@@ -362,16 +370,23 @@ export default {
                     const box = boxIntersects[0];
 
                     this.nameCollection = box.object.name;
+                    console.log(this.nameCollection);
 
                     this.zoomModel(box, 3.5, 1, 3.5, -0.4);
 
-                    this.$emit("start-state-off");
+                    this.$emit("start-state-off", false);
+
+                    /** открываем описание слоёв */
+                    // this.showDescription(
+                    //     box,
+                    //     "placeholder",
+                    //     this.nameCollection
+                    // );
+                    this.boxIntersec = true;
                 }
-                this.boxIntersec = true;
             } else {
                 landItersects = this.raycaster.intersectObjects(
                     this.scene.children
-                    // this.intersects[this.nameCollection]
                 );
 
                 if (landItersects.length > 1) {
@@ -380,9 +395,18 @@ export default {
                     if (
                         this.intersects[this.nameCollection].some(
                             (o) => o.name === model.object.name
-                        )
+                        ) &&
+                        !model.object.name.includes("Land")
                     ) {
-                        this.zoomModel(model, 2, 1, 2, -0.5);
+                        this.zoomModel(model, 0, 1, 1, 0);
+
+                        this.showDescription(
+                            model,
+                            "modelsDescription",
+                            model.object.name
+                        );
+
+                        this.controls.autoRotate = true;
                     }
                 }
 
@@ -466,6 +490,57 @@ export default {
             // }
         },
 
+        showDescription(object, modelsDescr, key) {
+            if (!this.descripton) {
+                this.canvas.style.cursor = "default";
+
+                this.hover = false;
+
+                // if (this.selectedPart === clickedPart) {
+                //     this.originalColors.forEach((color, part) => {
+                //         part.visible = true;
+                //     });
+
+                //     this.selectedPart = null;
+                // } else {
+                //     this.scene.traverse((child) => {
+                //         if (
+                //             child.isMesh &&
+                //             child.name !== clickedPart.name
+                //         ) {
+                //             child.material.transparent = true;
+
+                //             gsap.to(
+                //                 child.material,
+                //                 {
+                //                     opacity: 0,
+                //                     duration: 0.8,
+                //                     onComplete: () => {
+                //                         child.visible = false;
+                //                     },
+                //                 },
+                //                 "<"
+                //             );
+                //         }
+                //     });
+
+                //     clickedPart.material.opacity = 1;
+
+                //     clickedPart.visible = true;
+
+                //     this.selectedPart = clickedPart;
+                // }
+
+                // let target = clickedPart.position.clone();
+
+                // console.log(clickedPart);
+
+                // this.moveCameraPosition(target, this.showCameraPosition);
+
+                this.$emit("show-description", modelsDescr, key);
+            }
+        },
+
         zoomModel(model, x, y, z, up) {
             const targetClone = model.object.position.clone();
             targetClone.x = targetClone.x + x;
@@ -475,29 +550,34 @@ export default {
             const targetWathcherClone = model.object.position.clone();
             targetWathcherClone.y = targetWathcherClone.y + up;
 
-            console.log(targetWathcherClone.y);
+            if (model.object.name.includes("land")) {
+                this.laersCameraPosition = targetClone;
+                this.laersTargetPosition = targetWathcherClone;
+            }
 
             this.moveCameraPosition(targetWathcherClone, targetClone);
         },
 
-        moveCameraPosition(target, position) {
+        moveCameraPosition(target, position, distance) {
             let tl = gsap.timeline();
-            if (!this.showDescripton) {
-                tl.to(this.controls.target, {
-                    ...target,
-                    duration: 1,
+
+            tl.to(this.controls.target, {
+                ...target,
+                duration: 1.5,
+                onComplete: () => {
+                    this.controls.enabled = true;
+                },
+            }).to(
+                this.camera.position,
+                {
+                    ...position,
+                    duration: 1.5,
                     onComplete: () => {
-                        this.controls.enabled = true;
+                        distance ? (this.controls.minDistance = distance) : "";
                     },
-                }).to(
-                    this.camera.position,
-                    {
-                        ...position,
-                        duration: 1,
-                    },
-                    "<"
-                );
-            }
+                },
+                "<"
+            );
         },
 
         destroyScene() {
@@ -733,9 +813,10 @@ export default {
                     });
                 });
                 this.moveCameraPosition(
-                    this.startTargetCamera,
-                    this.startCameraPosition
+                    this.laersTargetPosition,
+                    this.laersCameraPosition
                 );
+                this.controls.autoRotate = false;
             }
         },
 
@@ -744,13 +825,16 @@ export default {
         },
 
         startState() {
+            console.log(this.startState, "this.startState");
+
             if (this.startState) {
                 this.moveCameraPosition(
                     this.startTargetCamera,
-                    this.startCameraPosition
+                    this.startCameraPosition,
+                    4
                 );
                 this.boxIntersec = false;
-                this.controls.minDistance = 4;
+                this.controls.autoRotate = false;
             }
         },
     },
@@ -774,7 +858,7 @@ export default {
         <div
             ref="webGl"
             class="webGl"
-            @click="clickModel"
+            @mousedown="clickModel"
             :class="getActiveClass"
         ></div>
         <div class="tooltip" ref="tooltip">{{ tooltipText }}</div>

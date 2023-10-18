@@ -36,7 +36,7 @@ export class CreateModel {
 
                     if (child.name.includes('Landscape')) {
                         this.clickBoxSize.x = (Math.abs(child.geometry.boundingBox.max.x) + Math.abs(child.geometry.boundingBox.min.x)) * 1.01;
-                        this.clickBoxSize.y = (Math.abs(child.geometry.boundingBox.max.y) + Math.abs(child.geometry.boundingBox.min.y)) * 1.0;
+                        this.clickBoxSize.y = (Math.abs(child.geometry.boundingBox.max.y) + Math.abs(child.geometry.boundingBox.min.y)) * 1.2;
                         this.clickBoxSize.z = (Math.abs(child.geometry.boundingBox.max.z) + Math.abs(child.geometry.boundingBox.min.z)) * 1.01;
                     }
                 }
@@ -51,22 +51,6 @@ export class CreateModel {
 
             this.params.scene.add(this.model);
 
-            // if (this.params.position) {
-            //     this.model.position.set(this.params.position.x, this.params.position.y, this.params.position.z);
-            //     this.model.children.forEach((child) => {
-            //         if (child.isMesh) {
-            //             console.log(`Child Mesh "${child.name}" Local Position:`, child.position);
-
-            //             const localPosition = new Vector3();
-            //             localPosition.copy(child.position);
-            //             child.position.set(0, 0, 0);
-            //             localPosition.applyMatrix4(this.model.matrixWorld);
-            //             child.position.copy(localPosition);
-            //         }
-            //     });
-            // }
-
-
             this.CreateIntersecBox(this.params, this.clickBoxSize, this.model);
         });
     }
@@ -78,7 +62,7 @@ export class CreateModel {
         this.clickBoxMesh = null;
 
         this.clickBox = new THREE.BoxGeometry(size.x, size.y, size.z);
-        this.clickBoxMaterial = new THREE.MeshStandardMaterial({ visible: true, transparent: true, opacity: 0.5 });
+        this.clickBoxMaterial = new THREE.MeshStandardMaterial({ visible: false, transparent: true, opacity: 0.5 });
         this.clickBoxMesh = new THREE.Mesh(this.clickBox, this.clickBoxMaterial);
         this.clickBoxMesh.name = this.params.name;
         this.clickBoxMesh.position.set(this.params.position.x, this.params.position.y, this.params.position.z);

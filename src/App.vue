@@ -3,7 +3,6 @@
         <div class="wrapper">
             <webGl
                 :models-data="models"
-                :qurrent-model-key="qurrentModelKey"
                 :descripton="show"
                 :start-state="startState"
                 @show-description="showDescription"
@@ -15,7 +14,7 @@
                     class="btn btn-primary"
                     @click="turnStartState"
                 >
-                    Назад
+                    На главную
                 </button>
             </webGl>
 
@@ -50,8 +49,7 @@ export default {
         return {
             show: false,
             loaded: false,
-            qurrentModelKey: 0,
-            descriptionKey: 0,
+            descriptionKey: null,
             descriptionName: null,
             startStateBtn: false,
             startState: true,
@@ -60,7 +58,7 @@ export default {
                 {
                     model: "models/ground_1_1.glb",
                     scale: 1,
-                    position: { x: 0, y: 1.2, z: 0 },
+                    position: { x: 0, y: 1.4, z: 0 },
                     name: "land",
                     startDiacription: "Слой 1",
                 },
@@ -85,17 +83,21 @@ export default {
         turnStartState() {
             this.startState = true;
             this.startStateBtn = false;
+            this.show = false;
         },
 
-        startStateOff() {
+        startStateOff(state) {
+            console.log("here");
+
             this.startStateBtn = true;
-            this.startState = false;
+            this.startState = state;
         },
 
         showDescription(key, name) {
             console.log(key, name);
 
             this.show = true;
+
             this.descriptionKey = key;
             this.descriptionName = name;
         },

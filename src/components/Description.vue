@@ -2,8 +2,7 @@
 export default {
     props: {
         descriptionKey: {
-            type: Number,
-            default: 0,
+            type: String,
         },
         descriptionName: {
             type: String,
@@ -12,84 +11,40 @@ export default {
     data() {
         return {
             description: {
-                land: [
-                    {
-                        name: "1",
-                        definition: "1",
+                placeholder: {
+                    land: {
+                        name: "Верхний слой",
+                        definition: "Верхний слой",
                     },
-                    {
-                        name: "2",
-                        definition: "2",
+
+                    land_2: {
+                        name: "Средний слой",
+                        definition: "Средний слой",
                     },
-                    {
-                        name: "3",
-                        definition: "3",
+
+                    land_3: {
+                        name: "Нижний слой",
+                        definition: "Нижний слой",
                     },
-                    {
-                        name: "4",
-                        definition: "4",
+                },
+                modelsDescription: {
+                    Cube001: {
+                        name: "Простой куб",
+                        definition: "Тот самый куб",
                     },
-                    {
-                        name: "5",
-                        definition: "5",
+                    Cube002: {
+                        name: "Другой простой куб",
+                        definition: "Тот самый куб",
                     },
-                    {
-                        name: "6",
-                        definition: "6",
+                    Cube003: {
+                        name: "Другой простой куб",
+                        definition: "Тот самый куб",
                     },
-                ],
-                land_2: [
-                    {
-                        name: "1_2",
-                        definition: "1",
+                    Cube004: {
+                        name: "Другой простой куб",
+                        definition: "Тот самый куб",
                     },
-                    {
-                        name: "2_2",
-                        definition: "2",
-                    },
-                    {
-                        name: "3_2",
-                        definition: "3",
-                    },
-                    {
-                        name: "4_2",
-                        definition: "4",
-                    },
-                    {
-                        name: "5_2",
-                        definition: "5",
-                    },
-                    {
-                        name: "6_2",
-                        definition: "6",
-                    },
-                ],
-                land_3: [
-                    {
-                        name: "1_2",
-                        definition: "1",
-                    },
-                    {
-                        name: "2_2",
-                        definition: "2",
-                    },
-                    {
-                        name: "3_2",
-                        definition: "3",
-                    },
-                    {
-                        name: "4_2",
-                        definition: "4",
-                    },
-                    {
-                        name: "5_2",
-                        definition: "5",
-                    },
-                    {
-                        name: "6_2",
-                        definition: "6",
-                    },
-                ],
+                },
             },
         };
     },
@@ -97,18 +52,22 @@ export default {
     computed: {
         getData() {
             if (this.descriptionName !== null) {
-                return {
-                    name: this.description[this.descriptionName][
-                        this.descriptionKey
-                    ].name,
-                    definition:
-                        this.description[this.descriptionName][
-                            this.descriptionKey
-                        ].definition,
-                    image: this.description[this.descriptionName][
-                        this.descriptionKey
-                    ].image,
-                };
+                return this.description[this.descriptionKey][
+                    this.descriptionName
+                ];
+
+                // return {
+                //     name: this.description[this.descriptionName][
+                //         this.descriptionKey
+                //     ].name,
+                //     definition:
+                //         this.description[this.descriptionName][
+                //             this.descriptionKey
+                //         ].definition,
+                //     image: this.description[this.descriptionName][
+                //         this.descriptionKey
+                //     ].image,
+                // };
             } else {
                 return {
                     name: "",
@@ -116,9 +75,6 @@ export default {
                     image: "",
                 };
             }
-        },
-        checkData() {
-            return this.descriptionName !== null;
         },
     },
 };
@@ -135,9 +91,9 @@ export default {
             {{ getData.definition }}
         </h3>
 
-        <div class="discriotion__img-container">
+        <!-- <div class="discriotion__img-container">
             <img class="discriotion__img" :src="getData.image" alt="" />
-        </div>
+        </div> -->
 
         <slot name="close"></slot>
     </div>
