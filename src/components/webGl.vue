@@ -554,17 +554,13 @@ export default {
         getLaersInvisible(models) {
             this.scene.traverse((child) => {
                 if (child.isMesh && child.userData.parentName !== models) {
-                    gsap.to(
-                        child.material,
-                        {
-                            opacity: 0,
-                            duration: 0.8,
-                            onComplete: () => {
-                                child.visible = false;
-                            },
+                    gsap.to(child.material, {
+                        opacity: 0,
+                        duration: 0.3,
+                        onComplete: () => {
+                            child.visible = false;
                         },
-                        "<"
-                    );
+                    });
                 }
             });
         },
@@ -575,7 +571,7 @@ export default {
                     child.visible = true;
                     gsap.to(child.material, {
                         opacity: 1,
-                        duration: 0.8,
+                        duration: 0.3,
                     });
                 }
             });
