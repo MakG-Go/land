@@ -17,12 +17,8 @@ export default {
     },
     data() {
         return {
-            targetCamera: new THREE.Vector3(0, 0, 0),
             startTargetCamera: new THREE.Vector3(0, 0, 0),
             startCameraPosition: new THREE.Vector3(4, 2, 5),
-
-            // showCameraPosition: new THREE.Vector3(0.3, 0.85, 2.65),
-            // showTargetPosition: new THREE.Vector3(0.85, 0, 0),
 
             laersCameraPosition: null,
             laersTargetPosition: null,
@@ -580,12 +576,11 @@ export default {
         moveCameraPosition(target, position, distance) {
             let tl = gsap.timeline();
 
+            console.log(target, "pase target", position, "pase bosition");
+
             tl.to(this.controls.target, {
                 ...target,
                 duration: 1.5,
-                onComplete: () => {
-                    this.controls.enabled = true;
-                },
             }).to(
                 this.camera.position,
                 {
@@ -642,6 +637,7 @@ export default {
             this.camera = null;
             this.scene = null;
         },
+
         destroyModel() {
             this.scene.traverse((child) => {
                 if (child.isMesh) {
@@ -848,11 +844,13 @@ export default {
                 this.boxIntersec = false;
                 this.controls.autoRotate = false;
 
-                this.moveCameraPosition(
-                    this.startTargetCamera,
-                    this.startCameraPosition,
-                    4
-                );
+                this.$nextTick(() => {
+                    this.moveCameraPosition(
+                        this.startTargetCamera,
+                        this.startCameraPosition,
+                        4
+                    );
+                });
                 this.getLaersVisible(this.nameCollection);
             }
         },
