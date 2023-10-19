@@ -357,8 +357,6 @@ export default {
         clickModel(event) {
             this.getRaycaster(event);
 
-            console.log("click", this.boxIntersec);
-
             let boxIntersects, landItersects;
 
             if (!this.boxIntersec) {
@@ -367,6 +365,9 @@ export default {
                 );
 
                 if (boxIntersects.length > 0) {
+                    this.$emit("start-state-off", false);
+                    this.boxIntersec = true;
+
                     const box = boxIntersects[0];
 
                     this.nameCollection = box.object.name;
@@ -374,15 +375,7 @@ export default {
 
                     this.zoomModel(box, 3.5, 1, 3.5, -0.4);
 
-                    this.$emit("start-state-off", false);
-
-                    /** открываем описание слоёв */
-                    // this.showDescription(
-                    //     box,
-                    //     "placeholder",
-                    //     this.nameCollection
-                    // );
-                    this.boxIntersec = true;
+                    this.getLaersInvisible(this.nameCollection);
                 }
             } else {
                 landItersects = this.raycaster.intersectObjects(
@@ -556,6 +549,36 @@ export default {
             }
 
             this.moveCameraPosition(targetWathcherClone, targetClone);
+        },
+
+        getLaersInvisible(models) {
+            this.scene.traverse((child) => {
+                if (child.isMesh && child.userData.parentName !== models) {
+                    gsap.to(
+                        child.material,
+                        {
+                            opacity: 0,
+                            duration: 0.8,
+                            onComplete: () => {
+                                child.visible = false;
+                            },
+                        },
+                        "<"
+                    );
+                }
+            });
+        },
+
+        getLaersVisible(models) {
+            this.scene.traverse((child) => {
+                if (child.isMesh && child.userData.parentName !== models) {
+                    child.visible = true;
+                    gsap.to(child.material, {
+                        opacity: 1,
+                        duration: 0.8,
+                    });
+                }
+            });
         },
 
         moveCameraPosition(target, position, distance) {
@@ -795,23 +818,23 @@ export default {
     watch: {
         descripton() {
             if (!this.descripton && this.meshes.length > 0) {
-                this.meshes.forEach((item) => {
-                    item.traverse((child) => {
-                        if (child.isMesh && child.userData.originalColor) {
-                            gsap.to(child.material, {
-                                opacity: 1,
-                                duration: 0.8,
-                                ease: "Circ.inOut",
-                                onComplete: () => {
-                                    child.material.transparent = false;
-                                    this.hover = true;
-                                },
-                            });
+                // this.meshes.forEach((item) => {
+                //     item.traverse((child) => {
+                //         if (child.isMesh && child.userData.originalColor) {
+                //             gsap.to(child.material, {
+                //                 opacity: 1,
+                //                 duration: 0.8,
+                //                 ease: "Circ.inOut",
+                //                 onComplete: () => {
+                //                     child.material.transparent = false;
+                //                     this.hover = true;
+                //                 },
+                //             });
 
-                            child.visible = true;
-                        }
-                    });
-                });
+                //             child.visible = true;
+                //         }
+                //     });
+                // });
                 this.moveCameraPosition(
                     this.laersTargetPosition,
                     this.laersCameraPosition
@@ -825,16 +848,16 @@ export default {
         },
 
         startState() {
-            console.log(this.startState, "this.startState");
-
             if (this.startState) {
+                this.boxIntersec = false;
+                this.controls.autoRotate = false;
+
                 this.moveCameraPosition(
                     this.startTargetCamera,
                     this.startCameraPosition,
                     4
                 );
-                this.boxIntersec = false;
-                this.controls.autoRotate = false;
+                this.getLaersVisible(this.nameCollection);
             }
         },
     },

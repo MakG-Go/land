@@ -28,9 +28,11 @@ export class CreateModel {
                     child.material.envMap = this.params.material;
                     child.material.envMapIntensity = 3;
                     child.material.needsUpdate = true;
+                    child.material.transparent = true
+
                     child.userData.parentName = this.params.name;
-                    child.userData.key = key;
                     child.userData.originalColor = child.material.color.clone();
+
                     this.params.materialColor.set(child, child.material.color.clone());
                     this.params.intersecStore[this.params.name].push(child);
 
