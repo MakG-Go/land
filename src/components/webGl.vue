@@ -1,6 +1,7 @@
 
 <script>
 import _ from "lodash";
+import { acceleratedRaycast } from "three-mesh-bvh";
 import { gsap } from "gsap";
 import * as dat from "lil-gui";
 import * as THREE from "three";
@@ -12,7 +13,6 @@ export default {
     props: {
         startState: { type: Boolean, default: false },
         descripton: { type: Boolean, default: false },
-        qurrentModelKey: { type: Number, default: 0 },
         modelsData: { type: Array, required: true },
     },
     data() {
@@ -36,6 +36,7 @@ export default {
 
             hover: true,
             meshes: [],
+            bvhMeshes: [],
 
             intersects: {
                 box: [],
@@ -45,7 +46,9 @@ export default {
             },
 
             boxIntersec: false,
-            nameCollection: "",
+            currentCollection: null,
+            currentCollectionName: null,
+            currentModelName: null,
 
             hoveredObject: null,
             tooltipText: "",
@@ -59,7 +62,7 @@ export default {
         this.canvas = this.$refs.webGl;
         this.tooltip = this.$refs.tooltip;
         this.init();
-        this.throttledHoverModel = _.throttle(this.hoverModel, 1);
+        this.throttledHoverModel = _.throttle(this.hoverModel, 1000);
         this.resize();
         this.tick();
 
@@ -73,7 +76,7 @@ export default {
             });
         }
 
-        console.log(this.scene.children);
+        console.log(this.bvhMeshes);
     },
     beforeUnmount() {
         this.destroyScene();
@@ -86,7 +89,9 @@ export default {
         init() {
             this.scene = new THREE.Scene();
             this.raycaster = new THREE.Raycaster();
-            this.landRaycaster = new THREE.Raycaster();
+            this.raycaster.firstHitOnly = true;
+            THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
             this.mouse = new THREE.Vector2();
 
             this.getCameraParams();
@@ -176,7 +181,6 @@ export default {
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             this.raycaster.setFromCamera(this.mouse, this.camera);
-            this.landRaycaster.setFromCamera(this.mouse, this.camera);
         },
 
         createLight() {
@@ -226,6 +230,7 @@ export default {
                 scale: new THREE.Vector3(scale, scale, scale),
                 material: this.environmentMap,
                 meshStore: this.meshes,
+                bvhStore: this.bvhMeshes,
                 materialColor: this.originalColors,
                 preloader: this.getPreloader(),
                 intersecStore: this.intersects,
@@ -288,15 +293,15 @@ export default {
 
         hoverModel(event) {
             this.getRaycaster(event);
+            let intersects;
 
-            const intersect = this.raycaster.intersectObjects(
-                // this.intersects["land"]
-                this.scene.children
-            );
+            this.bvhMeshes.forEach((item) => {
+                intersects = this.raycaster.intersectObject(item);
 
-            // const intersects = this.raycaster.intersectObjects(
-            //     this.scene.children
-            // );
+                if (intersects.length > 0) {
+                    console.log(intersects[0]);
+                }
+            });
 
             // if (intersects.length > 0 && this.hover) {
             //     this.handleIntersect(intersects, event);
@@ -366,12 +371,13 @@ export default {
 
                     const box = boxIntersects[0];
 
-                    this.nameCollection = box.object.name;
-                    console.log(this.nameCollection);
+                    this.currentCollectionName = box.object.name;
 
                     this.zoomModel(box, 3.5, 1, 3.5, -0.4);
 
-                    this.getLaersInvisible(this.nameCollection);
+                    /** Прячем все стартовые слои, кроме выбранного */
+
+                    this.getLaersInvisible(this.currentCollectionName);
                 }
             } else {
                 landItersects = this.raycaster.intersectObjects(
@@ -381,13 +387,29 @@ export default {
                 if (landItersects.length > 1) {
                     const model = landItersects[1];
 
+                    this.currentCollection =
+                        this.intersects[this.currentCollectionName];
+
+                    console.log(this.currentCollection);
+
                     if (
-                        this.intersects[this.nameCollection].some(
-                            (o) => o.name === model.object.name
+                        this.intersects[this.currentCollectionName].some(
+                            (mash) => mash.name === model.object.name
                         ) &&
                         !model.object.name.includes("Land")
                     ) {
+                        this.currentModelName = model.object.name;
+
+                        /** Приближаем выбранную модель */
+
                         this.zoomModel(model, 0, 1, 1, 0);
+
+                        /** Прячем все модели текущей коллекции, кроме выбранной */
+
+                        this.getModelsInvisible(
+                            this.intersects[this.currentCollectionName], // Выбранная коллекция
+                            model.object.name // Имя выбранной модели
+                        );
 
                         this.showDescription(
                             model,
@@ -547,9 +569,10 @@ export default {
             this.moveCameraPosition(targetWathcherClone, targetClone);
         },
 
-        getLaersInvisible(models) {
+        getLaersInvisible(layer) {
             this.scene.traverse((child) => {
-                if (child.isMesh && child.userData.parentName !== models) {
+                if (child.isMesh && child.userData.parentName !== layer) {
+                    child.material.transparent = true;
                     gsap.to(child.material, {
                         opacity: 0,
                         duration: 0.3,
@@ -561,13 +584,46 @@ export default {
             });
         },
 
-        getLaersVisible(models) {
+        getLaersVisible(layer) {
             this.scene.traverse((child) => {
-                if (child.isMesh && child.userData.parentName !== models) {
+                if (child.isMesh && child.userData.parentName !== layer) {
                     child.visible = true;
                     gsap.to(child.material, {
                         opacity: 1,
                         duration: 0.3,
+                        onComplete: () => {
+                            child.material.transparent = false;
+                        },
+                    });
+                }
+            });
+        },
+
+        getModelsInvisible(collection, model) {
+            collection.forEach((mash, key) => {
+                if (mash.name != model) {
+                    mash.material.transparent = true;
+                    gsap.to(mash.material, {
+                        opacity: 0,
+                        duration: 0.3,
+                        onComplete: () => {
+                            mash.visible = false;
+                        },
+                    });
+                }
+            });
+        },
+
+        getModelsVisible(collection, model) {
+            collection.forEach((mash, key) => {
+                if (mash.name != model) {
+                    mash.visible = true;
+                    gsap.to(mash.material, {
+                        opacity: 1,
+                        duration: 0.3,
+                        onComplete: () => {
+                            mash.material.transparent = false;
+                        },
                     });
                 }
             });
@@ -575,8 +631,6 @@ export default {
 
         moveCameraPosition(target, position, distance) {
             let tl = gsap.timeline();
-
-            console.log(target, "pase target", position, "pase bosition");
 
             tl.to(this.controls.target, {
                 ...target,
@@ -666,9 +720,11 @@ export default {
             this.meshes = [];
             this.originalColors = new Map();
         },
+
         stopParalax() {
             this.startParalax = false;
         },
+
         tick() {
             if (
                 this.startParalax &&
@@ -695,6 +751,7 @@ export default {
 
             requestAnimationFrame(this.tick);
         },
+
         resize() {
             window.addEventListener("resize", () => {
                 // Update sizes
@@ -715,6 +772,7 @@ export default {
                 );
             });
         },
+
         createGuiParams() {
             // Debug;
             this.gui = new dat.GUI({
@@ -831,6 +889,11 @@ export default {
                     this.laersTargetPosition,
                     this.laersCameraPosition
                 );
+
+                this.getModelsVisible(
+                    this.intersects[this.currentCollectionName],
+                    this.currentModelName
+                );
                 this.controls.autoRotate = false;
             }
         },
@@ -851,7 +914,7 @@ export default {
                         4
                     );
                 });
-                this.getLaersVisible(this.nameCollection);
+                this.getLaersVisible(this.currentCollectionName);
             }
         },
     },

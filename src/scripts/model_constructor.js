@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshBVH } from 'three-mesh-bvh'
 import * as THREE from 'three'
 
 export class CreateModel {
@@ -14,21 +15,27 @@ export class CreateModel {
     }
 
     LoadModels(params) {
+
+
         this.params = params;
         this.clickBoxSize = { x: '', y: '', z: '' };
+        this.bvhBox = null
+
+
 
         new GLTFLoader(this.params.preloader).load(this.params.model, (gltf) => {
             this.model = gltf.scene;
             this.model.updateMatrixWorld(true);
             this.params.meshStore.push(gltf.scene);
 
-            this.model.children.forEach((child, key) => {
+            this.model.traverse((child) => {
                 if (child.isMesh) {
-                    this.model.userData[child.name] = child.material;
+
                     child.material.envMap = this.params.material;
                     child.material.envMapIntensity = 3;
                     child.material.needsUpdate = true;
-                    child.material.transparent = true
+
+                    this.model.userData[child.name] = child.material;
 
                     child.userData.parentName = this.params.name;
                     child.userData.originalColor = child.material.color.clone();
@@ -41,11 +48,15 @@ export class CreateModel {
                         this.clickBoxSize.y = (Math.abs(child.geometry.boundingBox.max.y) + Math.abs(child.geometry.boundingBox.min.y)) * 1.2;
                         this.clickBoxSize.z = (Math.abs(child.geometry.boundingBox.max.z) + Math.abs(child.geometry.boundingBox.min.z)) * 1.01;
                     }
+
+                    this.bvhBox = new MeshBVH(child.geometry)
+                    this.params.bvhStore.push(this.bvhBox)
+
                 }
-            });
+            })
+
 
             this.model.name = this.params.name;
-
 
             if (this.params.scale) {
                 this.model.scale.set(this.params.scale.x, this.params.scale.y, this.params.scale.z);
